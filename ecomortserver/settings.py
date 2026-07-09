@@ -124,13 +124,13 @@ CORS_ALLOW_HEADERS = [
 # ============ CSRF SETTINGS ============
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:5173').split(',')
 
 # ============ SESSION COOKIE SETTINGS ============
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'
 
 # ============ REST FRAMEWORK ============
 REST_FRAMEWORK = {
@@ -172,7 +172,7 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-# Unfold settings (keep your existing)
+
 from django.utils.translation import gettext_lazy as _
 
 UNFOLD = {
