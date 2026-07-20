@@ -11,9 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-0486x9o3r67tw)l9xo-&w*mnj8x1wlw9t(u*zfl299t7q$0q!l')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = False
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'helpdesk-backend-qtg5.onrender.com']
 
 # Application definition
 INSTALLED_APPS = [
@@ -96,7 +96,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ============ CORS SETTINGS ============
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,http://127.0.0.1:5173').split(',')
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://helpdesk-xi-two.vercel.app'
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -122,15 +126,19 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ============ CSRF SETTINGS ============
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:5173,https://helpdesk-xi-two.vercel.app').split(',')
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'https://helpdesk-xi-two.vercel.app',
+    'https://helpdesk-backend-qtg5.onrender.com'
+]
 
 # ============ SESSION COOKIE SETTINGS ============
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'
 
 # ============ REST FRAMEWORK ============
 REST_FRAMEWORK = {
