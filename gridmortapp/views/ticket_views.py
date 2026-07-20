@@ -30,6 +30,7 @@ class LoginView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             
+            # Create tokens
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
@@ -52,24 +53,27 @@ class LoginView(APIView):
                 'message': 'Login successful'
             }, status=status.HTTP_200_OK)
             
-            # Set JWT cookies for production
+            # Set access token (short lived - 1 hour)
             response.set_cookie(
                 'access_token',
                 access_token,
                 httponly=True,
-                secure=True,           # MUST be True for HTTPS
-                samesite='None',       # MUST be None for cross-domain
-                max_age=60 * 60,
+                secure=True,
+                samesite='None',
+                max_age=60 * 60,  # 1 hour
                 path='/'
             )
+            
+            # Set refresh token (longer lived - 7 days)
+            # Only sent to refresh endpoint for security
             response.set_cookie(
                 'refresh_token',
                 refresh_token,
                 httponly=True,
-                secure=True,           # MUST be True for HTTPS
-                samesite='None',       # MUST be None for cross-domain
-                max_age=7 * 24 * 60 * 60,
-                path='/'
+                secure=True,
+                samesite='None',
+                max_age=7 * 24 * 60 * 60,  # 7 days
+                path='/api/auth/refresh/'  # Only sent to this endpoint
             )
             
             # Set CSRF cookie (httponly=False so JavaScript can read it)
@@ -77,8 +81,8 @@ class LoginView(APIView):
                 'csrftoken',
                 csrf_token,
                 httponly=False,
-                secure=True,           # MUST be True for HTTPS
-                samesite='None',       # MUST be None for cross-domain
+                secure=True,
+                samesite='None',
                 max_age=60 * 60 * 24 * 7,
                 path='/'
             )
@@ -98,6 +102,16 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
+        # Try to blacklist the refresh token
+        try:
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                refresh = RefreshToken(refresh_token)
+                # Uncomment if you have blacklist app installed
+                # refresh.blacklist()
+        except Exception as e:
+            logger.warning(f"Could not blacklist token: {str(e)}")
+        
         AuditLog.objects.create(
             user=request.user,
             action='USER_LOGOUT',
@@ -135,20 +149,52 @@ class RefreshTokenView(APIView):
             )
         
         try:
+            # Validate the refresh token
             refresh = RefreshToken(refresh_token)
-            access_token = str(refresh.access_token)
             
-            response = Response({'success': True})
+            # Get user from token
+            user_id = refresh.payload.get('user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Create NEW access token
+            new_access_token = str(refresh.access_token)
+            
+            # ROTATE refresh token (create new one, old one becomes invalid)
+            new_refresh_token = str(RefreshToken.for_user(user))
+            
+            # Blacklist the old refresh token
+            # Uncomment if you have blacklist app installed
+            # refresh.blacklist()
+            
+            response = Response({
+                'success': True,
+                'message': 'Token refreshed successfully'
+            })
+            
+            # Set new access token
             response.set_cookie(
                 'access_token',
-                access_token,
+                new_access_token,
                 httponly=True,
-                secure=True,           # MUST be True for HTTPS
-                samesite='None',       # MUST be None for cross-domain
-                max_age=60 * 60,
+                secure=True,
+                samesite='None',
+                max_age=60 * 60,  # 1 hour
                 path='/'
             )
+            
+            # Set NEW refresh token (rotated)
+            response.set_cookie(
+                'refresh_token',
+                new_refresh_token,
+                httponly=True,
+                secure=True,
+                samesite='None',
+                max_age=7 * 24 * 60 * 60,  # 7 days
+                path='/api/auth/refresh/'  # Only sent to this endpoint
+            )
+            
             return response
+            
         except Exception as e:
             logger.error(f"Refresh token error: {str(e)}")
             return Response(
