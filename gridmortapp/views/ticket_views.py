@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.middleware.csrf import get_token
 import logging
 
 from gridmortapp.system_models.ticket_models import Ticket, TicketMessage, TicketCategory, TicketStatus, TicketPriority
@@ -33,6 +34,9 @@ class LoginView(APIView):
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
             
+            # Get CSRF token
+            csrf_token = get_token(request)
+            
             AuditLog.objects.create(
                 user=user,
                 action='USER_LOGIN',
@@ -48,12 +52,13 @@ class LoginView(APIView):
                 'message': 'Login successful'
             }, status=status.HTTP_200_OK)
             
+            # Set JWT cookies for production
             response.set_cookie(
                 'access_token',
                 access_token,
                 httponly=True,
-                secure=False,
-                samesite='Lax',
+                secure=True,           # MUST be True for HTTPS
+                samesite='None',       # MUST be None for cross-domain
                 max_age=60 * 60,
                 path='/'
             )
@@ -61,9 +66,20 @@ class LoginView(APIView):
                 'refresh_token',
                 refresh_token,
                 httponly=True,
-                secure=False,
-                samesite='Lax',
+                secure=True,           # MUST be True for HTTPS
+                samesite='None',       # MUST be None for cross-domain
                 max_age=7 * 24 * 60 * 60,
+                path='/'
+            )
+            
+            # Set CSRF cookie (httponly=False so JavaScript can read it)
+            response.set_cookie(
+                'csrftoken',
+                csrf_token,
+                httponly=False,
+                secure=True,           # MUST be True for HTTPS
+                samesite='None',       # MUST be None for cross-domain
+                max_age=60 * 60 * 24 * 7,
                 path='/'
             )
             
@@ -92,6 +108,7 @@ class LogoutView(APIView):
         response = Response({'success': True, 'message': 'Logout successful'})
         response.delete_cookie('access_token', path='/')
         response.delete_cookie('refresh_token', path='/')
+        response.delete_cookie('csrftoken', path='/')
         return response
 
 
@@ -126,8 +143,8 @@ class RefreshTokenView(APIView):
                 'access_token',
                 access_token,
                 httponly=True,
-                secure=False,
-                samesite='Lax',
+                secure=True,           # MUST be True for HTTPS
+                samesite='None',       # MUST be None for cross-domain
                 max_age=60 * 60,
                 path='/'
             )
